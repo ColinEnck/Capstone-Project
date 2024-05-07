@@ -1,92 +1,42 @@
-Obj = {} -- drawable, movable object
-Obj.x = 0
-Obj.y = 0
-Obj.dx = 0
-Obj.dy = 0
-Obj.angle = -(math.pi / 2)
-Obj.type = "" -- can be "ship", "asteroid", or "bullet"
-Obj.__index = Obj
+SHIPH = 15 -- height from shooter tip to base
+ANGLEADJ = math.pi / 6 -- adjustment of angle between base points
+ANGFAC = 2.5 -- factor of angle adjustment
+SHIPSPEED = 5 -- factor of updatating dx and dy based on angle
+SHOOTSPEED = 300 -- factor of bullet speed
+ASTSPEED = 100 -- slowest asteroid speed
 
-function Obj:new()
-    return setmetatable({}, self)
-end
-
-function Obj:setpos(x, y)
-    self.x = x
-    self.y = y
-end
-
-function Obj:updatespeed(speed)
-    self.dx = self.dx + speed * math.cos(self.angle)
-    self.dy = self.dy + speed * math.sin(self.angle)
-end
-
-function Obj:update(dt)
-    self.x = self.x + self.dx * dt
-    self.y = self.y + self.dy * dt
-end
-
-function Obj:walls()
-    if self.x > WINDOWSIZE then
-        self.x = 0
-    elseif self.x < 0 then
-        self.x = WINDOWSIZE
-    end
-    if self.y > WINDOWSIZE then
-        self.y = 0
-    elseif self.y < 0 then
-        self.y = WINDOWSIZE
-    end
-end
-
-function Obj:draw()
-    if self.type == "ship" then
-        love.graphics.polygon(
-            "fill",
-            -- shooting point
-            self.x + SHIPH * math.cos(self.angle),
-            self.y + SHIPH * math.sin(self.angle),
-            -- facing left, top base point
-            self.x - SHIPH * math.cos(self.angle + ANGLEADJ),
-            self.y - SHIPH * math.sin(self.angle + ANGLEADJ),
-            -- facing left, bottom base point
-            self.x - SHIPH * math.cos(self.angle - ANGLEADJ),
-            self.y - SHIPH * math.sin(self.angle - ANGLEADJ)
-        )
-    end
-    if self.type == "bullet" then
-        love.graphics.circle("fill", self.x, self.y, 3)
-    end
-end
+require "obj"
+require "world"
 
 function love.load()
-    WINDOWSIZE = 800 -- size of window (height and width)
-    SHIPH = 15 -- height from shooter tip to base
-    ANGLEADJ = math.pi / 6 -- adjustment of angle between base points
-    ANGFAC = 2.5 -- factor of angle adjustment
-    SHIPSPEED = 5 -- factor of updatating dx and dy based on angle
-    SHOOTSPEED = 200 -- factor of bullet speed
-    COUNTTIME = 20 -- factor of waiting time between bullets
+    math.randomseed(os.time())
 
-    if not love.window.setMode(WINDOWSIZE, WINDOWSIZE) then
+    if not love.window.setMode(0, 0, {["fullscreen"] = true}) then
         print("Could not create window")
         love.event.quit()
     end
-
-    ship = Obj:new()
-    ship:setpos(WINDOWSIZE / 2, WINDOWSIZE / 2)
-    ship.type = "ship"
+    love.window.setTitle("ASTEROIDS!")
+    WWIDTH, WHEIGHT = love.graphics.getDimensions()
 
     shooting = false
-    countdown = COUNTTIME
+    timer = 0
     hit = false -- if just hit an asteroid
+    level = 1
 
-    math.randomseed(os.time())
+    ship = Obj:new({
+        ["x"] = WWIDTH / 2,
+        ["y"] = WHEIGHT / 2,
+        ["type"] = "ship" 
+    })
 
     dots = {} -- list of bullets on the screen
+    asts = {} -- list of asteroids on the screen
+
+    World.newLevel()
 end
 
 function love.update(dt)
+    timer = timer + dt
     if love.keyboard.isDown("a") then
         ship.angle = ship.angle - ANGFAC * dt
     elseif love.keyboard.isDown("d") then
@@ -97,26 +47,40 @@ function love.update(dt)
         ship:updatespeed(-SHIPSPEED)
     end
 
-    if shooting and countdown <= 0 then
-        local bullet = Obj:new()
-        bullet.x = ship.x
-        bullet.y = ship.y
-        bullet.angle = ship.angle
+    if shooting and timer >= 0.35 then
+        bullet = Obj:new({
+            ["x"] = ship.x,
+            ["y"] = ship.y,
+            ["type"] = "bullet",
+            ["angle"] = ship.angle
+        })
         bullet:updatespeed(SHOOTSPEED)
-        bullet.type = "bullet"
-        table.insert(dots, bullet) 
+        table.insert(dots, 1, bullet) -- queue moves left to right
+        if table.getn(dots) > 20 then
+            table.remove(dots)
+        end
         shooting = false
-        countdown = COUNTTIME + 1
+        timer = 0
     end
 
     ship:walls()
     ship:update(dt)
-    for k,v in pairs(dots) do
+    for i,v in ipairs(dots) do
         v:update(dt)
+        if v:collision(World) then
+            table.remove(dots, i)
+            if table.getn(asts) == 0 then
+                World.newLevel()
+            end
+        end
     end
-
-    if hit then countdown = countdown - 10
-    else countdown = countdown - 1 end
+    for i,v in ipairs(asts) do
+        v:update(dt)
+        v:walls()
+    end
+    if ship:collision() then
+        World.restart()
+    end
 end
 
 function love.draw()
@@ -126,6 +90,13 @@ function love.draw()
             v:draw()
         end
     end
+    if table.getn(asts) > 0 then
+        for i,v in ipairs(asts) do
+            v:draw()
+        end
+    end
+    love.graphics.print(tostring(World.score), 10, 10)
+    love.graphics.print("Press ESCAPE to exit", WWIDTH-22*7, 10)
 end
 
 function love.keypressed(key)
