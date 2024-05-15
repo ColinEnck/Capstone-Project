@@ -2,6 +2,7 @@
 #include <curses.h>
 #include <signal.h>
 #include <time.h>
+#include <locale.h>
 #define APLSIZ 25
 
 struct SnakePiece 
@@ -35,6 +36,7 @@ int main(int argc, char *argv[])
     srand(time(0));
 
     // curses setup
+    setlocale(LC_ALL, "");
     signal(SIGINT, finish);      /* arrange interrupts to terminate */
     initscr();       /* initialize the curses library */
     keypad(stdscr, TRUE);   /* enable keyboard mapping */
@@ -149,7 +151,7 @@ int main(int argc, char *argv[])
 
         // paints the apple
         for (int i = 0; i < APLSIZ; i++)
-            mvaddch(apples[i].y, apples[i].x, '^');
+            mvaddch(apples[i].y, apples[i].x, ACS_DIAMOND);
         
         refresh();
     }
