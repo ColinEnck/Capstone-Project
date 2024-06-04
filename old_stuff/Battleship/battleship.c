@@ -6,39 +6,39 @@
 	date initialized: May 18th, 2024
 */
 #include <ncurses.h>
-#include <stdlib.h> // need this for exit(0); code breaks otherwise
+#include <stdlib.h>
 #include <signal.h>
 #include <locale.h>
-#define STARTHP 10
-#define STARTSTR 10
-#define STARTARM 2
 
-using namespace std;
-
-typedef struct {
+typedef struct
+{
     int x;
     int y;
 } Point;
 
+void drawBoard();
 static void finish(int sig);
 
-int main(int argc, char const *argv[]) {
+int main(int argc, char const *argv[])
+{
 	// curses and others setup
 	setlocale(LC_ALL, "");
     signal(SIGINT, finish);     /* arrange interrupts to terminate */
     initscr();      /* initialize the curses library */
     keypad(stdscr, TRUE);   /* enable keyboard mapping */
     nonl();         /* tell curses not to do NL->CR/NL on output */
-    // cbreak();       /* take input chars one at a time, no wait for \n */
+    cbreak();       /* take input chars one at a time, no wait for \n */
     curs_set(0);    /* makes the cursor invisible */
     echo();
 
     // initializations and setup
     int x, y;
+    char c;
     getmaxyx(stdscr, y, x);
     
     // setup colors (this is a template found online)
-    if (has_colors()) {
+    if (has_colors())
+    {
         start_color();
         init_pair(1, COLOR_RED,     COLOR_BLACK);
         init_pair(2, COLOR_GREEN,   COLOR_BLACK);
@@ -49,9 +49,16 @@ int main(int argc, char const *argv[]) {
         init_pair(7, COLOR_WHITE,   COLOR_BLACK);
     }
 
-    for (;;) {
+    for (;;)
+    {
     	// keyboard input
-    	getch();
+        c = getch();
+        switch (c) 
+        {
+        case 'q':
+            goto done; // breaks out of the for loop
+            break;
+        }
 
     	// game logic
 
@@ -59,11 +66,19 @@ int main(int argc, char const *argv[]) {
         refresh();
     }
 
+done:;
+
     finish(0);
 	return 0;
 }
 
-static void finish(int sig) {
+void drawBoard()
+{
+    
+}
+
+static void finish(int sig)
+{
     endwin();
     exit(0);
 }
