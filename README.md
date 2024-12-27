@@ -2,7 +2,7 @@
 
 Here I will be creating a collection of programs whose job is to log keystrokes.\
 \
-Here are my steps to completing my capstone project:\
+Here are my steps to completing my capstone project:
 
 ## Step 1:
 - Write a python script that stores keystrokes in a text file while running in the background.
