@@ -35,5 +35,7 @@ for line in lines:
         # add the val to the dataframe under the correct key 
         data[temp_key].append(temp_val)
 
+f.close()
 df = pd.DataFrame(data)
-print(df)
+
+df.to_csv("output.csv")
